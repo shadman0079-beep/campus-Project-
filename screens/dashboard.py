@@ -1,3 +1,4 @@
+
 # screens/dashboard.py
 # BubtOps - University Asset Maintenance System
 
@@ -7,6 +8,7 @@ from tkinter import ttk, messagebox
 
 import theme
 from database.db import DATABASE_PATH
+from screens.asset_registry import show_asset_registry
 
 
 def get_dashboard_data():
@@ -46,7 +48,13 @@ def get_dashboard_data():
             """
         ).fetchall()
 
-    return total_assets, in_service, needs_attention, maintenance_cost, recent_records
+    return (
+        total_assets,
+        in_service,
+        needs_attention,
+        maintenance_cost,
+        recent_records
+    )
 
 
 def show_dashboard(window):
@@ -65,14 +73,16 @@ def show_dashboard(window):
     layout = tk.Frame(window, bg=theme.DASHBOARD_BACKGROUND)
     layout.pack(fill="both", expand=True)
 
-    # Custom title bar (fixed; does not scroll)
+    # Custom title bar
     title_bar = tk.Frame(layout, bg=theme.HEADER_BACKGROUND, height=38)
     title_bar.pack(side="top", fill="x")
     title_bar.pack_propagate(False)
 
     tk.Label(
-        title_bar, text="◆  BubtOps",
-        bg=theme.HEADER_BACKGROUND, fg=theme.CYAN,
+        title_bar,
+        text="◆  BubtOps",
+        bg=theme.HEADER_BACKGROUND,
+        fg=theme.CYAN,
         font=(theme.FONT_FAMILY, 10, "bold")
     ).pack(side="left", padx=14)
 
@@ -101,16 +111,29 @@ def show_dashboard(window):
 
     def make_title_button(text, command, hover_color):
         return tk.Button(
-            title_bar, text=text, command=command,
-            bg=theme.HEADER_BACKGROUND, fg=theme.TEXT_PRIMARY,
-            activebackground=hover_color, activeforeground="#FFFFFF",
-            relief="flat", bd=0, width=5, cursor="hand2",
+            title_bar,
+            text=text,
+            command=command,
+            bg=theme.HEADER_BACKGROUND,
+            fg=theme.TEXT_PRIMARY,
+            activebackground=hover_color,
+            activeforeground="#FFFFFF",
+            relief="flat",
+            bd=0,
+            width=5,
+            cursor="hand2",
             font=(theme.FONT_FAMILY, 10)
         )
 
-    make_title_button("✕", window.destroy, theme.ERROR).pack(side="right", fill="y")
-    make_title_button("□", toggle_maximize, theme.PRIMARY).pack(side="right", fill="y")
-    make_title_button("—", minimize_window, theme.PRIMARY).pack(side="right", fill="y")
+    make_title_button("✕", window.destroy, theme.ERROR).pack(
+        side="right", fill="y"
+    )
+    make_title_button("□", toggle_maximize, theme.PRIMARY).pack(
+        side="right", fill="y"
+    )
+    make_title_button("—", minimize_window, theme.PRIMARY).pack(
+        side="right", fill="y"
+    )
 
     def start_drag(event):
         if not getattr(window, "_is_maximized", False):
@@ -127,43 +150,70 @@ def show_dashboard(window):
     title_bar.bind("<Button-1>", start_drag)
     title_bar.bind("<B1-Motion>", drag_window)
 
-    # Main area: navigation sidebar + dashboard content
+    # Main area: sidebar and dashboard content
     main_area = tk.Frame(layout, bg=theme.DASHBOARD_BACKGROUND)
     main_area.pack(fill="both", expand=True)
 
-    sidebar = tk.Frame(main_area, bg=theme.SIDEBAR_BACKGROUND, width=220)
+    sidebar = tk.Frame(
+        main_area,
+        bg=theme.SIDEBAR_BACKGROUND,
+        width=220
+    )
     sidebar.pack(side="left", fill="y")
     sidebar.pack_propagate(False)
 
     tk.Label(
-        sidebar, text="WORKSPACE",
-        bg=theme.SIDEBAR_BACKGROUND, fg=theme.TEXT_MUTED,
+        sidebar,
+        text="WORKSPACE",
+        bg=theme.SIDEBAR_BACKGROUND,
+        fg=theme.TEXT_MUTED,
         font=(theme.FONT_FAMILY, 9, "bold")
     ).pack(anchor="w", padx=20, pady=(25, 12))
 
-    def sidebar_item(label, selected=False):
-        row_bg = theme.CARD_BACKGROUND if selected else theme.SIDEBAR_BACKGROUND
-        fg = theme.CYAN if selected else theme.TEXT_SECONDARY
-        item = tk.Frame(sidebar, bg=row_bg, height=42)
-        item.pack(fill="x", padx=10, pady=3)
-        item.pack_propagate(False)
-        tk.Label(
-            item, text=label, anchor="w",
-            bg=row_bg, fg=fg,
-            font=(theme.FONT_FAMILY, 10, "bold" if selected else "normal")
-        ).pack(fill="both", expand=True, padx=12)
-        if selected:
-            tk.Frame(item, bg=theme.CYAN, width=3).pack(side="left", fill="y")
-            item.pack_configure(pady=3)
+    # Sidebar navigation
+    def sidebar_item(label, selected=False, command=None):
+        row_bg = (
+            theme.CARD_BACKGROUND if selected
+            else theme.SIDEBAR_BACKGROUND
+        )
+
+        row = tk.Frame(
+            sidebar,
+            bg=row_bg,
+            cursor="hand2"
+        )
+        row.pack(fill="x", padx=12, pady=3)
+
+        label_widget = tk.Label(
+            row,
+            text=label,
+            bg=row_bg,
+            fg=theme.TEXT_PRIMARY if selected else theme.TEXT_SECONDARY,
+            font=(
+                theme.FONT_FAMILY,
+                10,
+                "bold" if selected else "normal"
+            ),
+            cursor="hand2",
+            anchor="w"
+        )
+        label_widget.pack(fill="both", expand=True, padx=12, pady=10)
+
+        if command is not None:
+            row.bind("<Button-1>", lambda event: command())
+            label_widget.bind("<Button-1>", lambda event: command())
 
     sidebar_item("▦   Campus Overview", selected=True)
-    sidebar_item("▧   Asset Registry")
+    sidebar_item(
+        "▧   Asset Registry",
+        command=lambda: show_asset_registry(window)
+    )
     sidebar_item("⌖   Locations")
     sidebar_item("⚒   Maintenance")
     sidebar_item("▤   Reports")
     sidebar_item("⚙   Settings")
 
-    # Dashboard content is the only vertically scrolling area.
+    # Dashboard content
     content = tk.Frame(main_area, bg=theme.DASHBOARD_BACKGROUND)
     content.pack(side="left", fill="both", expand=True)
 
@@ -174,30 +224,38 @@ def show_dashboard(window):
     header_text.pack(side="left", padx=28, pady=22)
 
     tk.Label(
-        header_text, text="Campus Overview",
+        header_text,
+        text="Campus Overview",
         font=(theme.FONT_FAMILY, 23, "bold"),
-        bg=theme.HEADER_BACKGROUND, fg=theme.TEXT_PRIMARY
+        bg=theme.HEADER_BACKGROUND,
+        fg=theme.TEXT_PRIMARY
     ).pack(anchor="w")
 
     tk.Label(
-        header_text, text="Monitor university assets and maintenance",
+        header_text,
+        text="Monitor university assets and maintenance",
         font=(theme.FONT_FAMILY, 10),
-        bg=theme.HEADER_BACKGROUND, fg=theme.TEXT_SECONDARY
+        bg=theme.HEADER_BACKGROUND,
+        fg=theme.TEXT_SECONDARY
     ).pack(anchor="w", pady=(4, 0))
 
     tk.Label(
-        header, text="● SYSTEM ONLINE",
+        header,
+        text="● SYSTEM ONLINE",
         font=(theme.FONT_FAMILY, 9, "bold"),
-        bg=theme.HEADER_BACKGROUND, fg=theme.SUCCESS
+        bg=theme.HEADER_BACKGROUND,
+        fg=theme.SUCCESS
     ).pack(side="right", padx=28)
 
-    # Scrollable canvas area. No visible scrollbar widget is created.
+    # Scrollable dashboard body
     canvas_area = tk.Frame(content, bg=theme.DASHBOARD_BACKGROUND)
     canvas_area.pack(fill="both", expand=True)
 
     canvas = tk.Canvas(
-        canvas_area, bg=theme.DASHBOARD_BACKGROUND,
-        highlightthickness=0, borderwidth=0
+        canvas_area,
+        bg=theme.DASHBOARD_BACKGROUND,
+        highlightthickness=0,
+        borderwidth=0
     )
     canvas.pack(side="left", fill="both", expand=True)
 
@@ -211,18 +269,15 @@ def show_dashboard(window):
     body.bind("<Configure>", update_scroll_region)
     canvas.bind("<Configure>", update_scroll_region)
 
-    # Smooth mouse-wheel scrolling. The title bar and sidebar do not scroll.
     target_scroll_y = 0.0
     animation_running = False
-    scroll_animation_id = None
 
     def animate_scroll():
-        nonlocal target_scroll_y, animation_running, scroll_animation_id
+        nonlocal target_scroll_y, animation_running
 
         bounds = canvas.bbox("all")
         if not bounds:
             animation_running = False
-            scroll_animation_id = None
             return
 
         content_height = max(1, bounds[3] - bounds[1])
@@ -236,11 +291,12 @@ def show_dashboard(window):
         if abs(difference) < 1:
             canvas.yview_moveto(target_scroll_y / content_height)
             animation_running = False
-            scroll_animation_id = None
             return
 
-        canvas.yview_moveto((current_y + difference * 0.25) / content_height)
-        scroll_animation_id = window.after(10, animate_scroll)
+        canvas.yview_moveto(
+            (current_y + difference * 0.25) / content_height
+        )
+        window.after(10, animate_scroll)
 
     def scroll_dashboard(event):
         nonlocal target_scroll_y, animation_running
@@ -272,15 +328,17 @@ def show_dashboard(window):
         for child in widget.winfo_children():
             bind_wheel_to_body(child)
 
-    # Build widgets first; bind after the body is populated below.
     canvas.bind("<MouseWheel>", scroll_dashboard)
 
-    # Load database statistics
+    # Read database statistics
     database_ok = True
     try:
         (
-            total_assets, in_service, needs_attention,
-            maintenance_cost, recent_records
+            total_assets,
+            in_service,
+            needs_attention,
+            maintenance_cost,
+            recent_records
         ) = get_dashboard_data()
     except sqlite3.Error as error:
         database_ok = False
@@ -293,11 +351,13 @@ def show_dashboard(window):
             parent=window
         )
 
-    # Statistic cards
+    # Asset summary cards
     tk.Label(
-        body, text="ASSET SUMMARY",
+        body,
+        text="ASSET SUMMARY",
         font=(theme.FONT_FAMILY, 10, "bold"),
-        bg=theme.DASHBOARD_BACKGROUND, fg=theme.TEXT_SECONDARY
+        bg=theme.DASHBOARD_BACKGROUND,
+        fg=theme.TEXT_SECONDARY
     ).pack(anchor="w", padx=24, pady=(22, 12))
 
     cards = tk.Frame(body, bg=theme.DASHBOARD_BACKGROUND)
@@ -312,26 +372,38 @@ def show_dashboard(window):
 
     for title, value, accent in card_data:
         card = tk.Frame(
-            cards, bg=theme.CARD_BACKGROUND,
-            highlightbackground=theme.BORDER, highlightthickness=1
+            cards,
+            bg=theme.CARD_BACKGROUND,
+            highlightbackground=theme.BORDER,
+            highlightthickness=1
         )
         card.pack(side="left", fill="both", expand=True, padx=6)
 
         tk.Frame(card, bg=accent, height=4).pack(fill="x")
+
         tk.Label(
-            card, text=title, font=(theme.FONT_FAMILY, 9, "bold"),
-            bg=theme.CARD_BACKGROUND, fg=theme.TEXT_SECONDARY
+            card,
+            text=title,
+            font=(theme.FONT_FAMILY, 9, "bold"),
+            bg=theme.CARD_BACKGROUND,
+            fg=theme.TEXT_SECONDARY
         ).pack(anchor="w", padx=14, pady=(16, 7))
+
         tk.Label(
-            card, text=value, font=(theme.FONT_FAMILY, 20, "bold"),
-            bg=theme.CARD_BACKGROUND, fg=theme.TEXT_PRIMARY
+            card,
+            text=value,
+            font=(theme.FONT_FAMILY, 20, "bold"),
+            bg=theme.CARD_BACKGROUND,
+            fg=theme.TEXT_PRIMARY
         ).pack(anchor="w", padx=14, pady=(0, 18))
 
     # Quick actions
     tk.Label(
-        body, text="QUICK ACTIONS",
+        body,
+        text="QUICK ACTIONS",
         font=(theme.FONT_FAMILY, 10, "bold"),
-        bg=theme.DASHBOARD_BACKGROUND, fg=theme.TEXT_SECONDARY
+        bg=theme.DASHBOARD_BACKGROUND,
+        fg=theme.TEXT_SECONDARY
     ).pack(anchor="w", padx=24, pady=(26, 12))
 
     actions = tk.Frame(body, bg=theme.DASHBOARD_BACKGROUND)
@@ -344,42 +416,70 @@ def show_dashboard(window):
             parent=window
         )
 
-    for label, color in [
-        ("+  Add Asset", theme.PRIMARY),
-        ("+  Log Maintenance", theme.PURPLE),
-        ("⌖  Manage Locations", theme.CYAN),
-    ]:
+    quick_actions = [
+        ("+  Add Asset", theme.PRIMARY,
+         lambda: show_asset_registry(window)),
+        ("+  Log Maintenance", theme.PURPLE,
+         lambda: not_ready("Log Maintenance")),
+        ("⌖  Manage Locations", theme.CYAN,
+         lambda: not_ready("Manage Locations")),
+    ]
+
+    for label, color, action in quick_actions:
         tk.Button(
-            actions, text=label,
-            command=lambda name=label: not_ready(name),
-            bg=color, fg="#FFFFFF",
-            activebackground=color, activeforeground="#FFFFFF",
+            actions,
+            text=label,
+            command=action,
+            bg=color,
+            fg="#FFFFFF",
+            activebackground=color,
+            activeforeground="#FFFFFF",
+            relief="flat",
+            bd=0,
+            cursor="hand2",
             font=(theme.FONT_FAMILY, 10, "bold"),
-            relief="flat", cursor="hand2", padx=14, pady=11
+            padx=14,
+            pady=10
         ).pack(side="left", padx=(0, 10))
 
     # Recent maintenance table
     tk.Label(
-        body, text="RECENT MAINTENANCE",
+        body,
+        text="RECENT MAINTENANCE",
         font=(theme.FONT_FAMILY, 10, "bold"),
-        bg=theme.DASHBOARD_BACKGROUND, fg=theme.TEXT_SECONDARY
+        bg=theme.DASHBOARD_BACKGROUND,
+        fg=theme.TEXT_SECONDARY
     ).pack(anchor="w", padx=24, pady=(28, 12))
 
     table_frame = tk.Frame(
-        body, bg=theme.CARD_BACKGROUND,
-        highlightbackground=theme.BORDER, highlightthickness=1
+        body,
+        bg=theme.CARD_BACKGROUND,
+        highlightbackground=theme.BORDER,
+        highlightthickness=1
     )
     table_frame.pack(fill="x", padx=24, pady=(0, 24))
 
-    columns = ("date", "code", "asset", "location", "description", "status", "cost")
+    columns = (
+        "date", "code", "asset", "location",
+        "description", "status", "cost"
+    )
     headings = {
-        "date": "DATE", "code": "ASSET CODE", "asset": "ASSET",
-        "location": "BUILDING", "description": "DESCRIPTION",
-        "status": "STATUS", "cost": "COST (৳)"
+        "date": "DATE",
+        "code": "ASSET CODE",
+        "asset": "ASSET",
+        "location": "BUILDING",
+        "description": "DESCRIPTION",
+        "status": "STATUS",
+        "cost": "COST (৳)"
     }
     widths = {
-        "date": 95, "code": 105, "asset": 145, "location": 110,
-        "description": 190, "status": 115, "cost": 100
+        "date": 95,
+        "code": 105,
+        "asset": 145,
+        "location": 110,
+        "description": 190,
+        "status": 115,
+        "cost": 100
     }
 
     style = ttk.Style(window)
@@ -389,7 +489,8 @@ def show_dashboard(window):
         background=theme.CARD_BACKGROUND,
         fieldbackground=theme.CARD_BACKGROUND,
         foreground=theme.TEXT_PRIMARY,
-        rowheight=34, borderwidth=0,
+        rowheight=34,
+        borderwidth=0,
         font=(theme.FONT_FAMILY, 9)
     )
     style.configure(
@@ -405,22 +506,34 @@ def show_dashboard(window):
         foreground=[("selected", "#FFFFFF")]
     )
 
-    table = ttk.Treeview(table_frame, columns=columns, show="headings", height=8)
+    table = ttk.Treeview(
+        table_frame,
+        columns=columns,
+        show="headings",
+        height=8
+    )
+
     for column in columns:
         table.heading(column, text=headings[column])
         table.column(column, width=widths[column], minwidth=70)
+
     table.pack(fill="x", expand=True)
 
     if recent_records:
         for record in recent_records:
             date, code, name, location, description, status, cost = record
             table.insert(
-                "", "end",
-                values=(date, code, name, location, description, status, f"{cost:,.2f}")
+                "",
+                "end",
+                values=(
+                    date, code, name, location,
+                    description, status, f"{cost:,.2f}"
+                )
             )
     else:
         table.insert(
-            "", "end",
+            "",
+            "end",
             values=(
                 "—", "—", "No records yet", "—",
                 "Log maintenance to see records here", "—", "—"
@@ -439,7 +552,6 @@ def show_dashboard(window):
         fg=theme.TEXT_MUTED
     ).pack(anchor="w", padx=24, pady=(0, 18))
 
-    # Bind wheel events to all body descendants, including widgets created above.
     bind_wheel_to_body(body)
 
     # Borderless window resizing
@@ -474,11 +586,11 @@ def show_dashboard(window):
             height = max(minimum_height, height + dy)
         if "w" in direction:
             new_width = max(minimum_width, width - dx)
-            x += width - new_width
+            x += window._resize_start_width - new_width
             width = new_width
         if "n" in direction:
             new_height = max(minimum_height, height - dy)
-            y += height - new_height
+            y += window._resize_start_height - new_height
             height = new_height
 
         window.geometry(f"{width}x{height}+{x}+{y}")
@@ -487,41 +599,64 @@ def show_dashboard(window):
         window._resize_direction = None
 
     resize_handles = [
-        ("n", "sb_v_double_arrow"), ("s", "sb_v_double_arrow"),
-        ("e", "sb_h_double_arrow"), ("w", "sb_h_double_arrow"),
-        ("nw", "size_nw_se"), ("ne", "size_ne_sw"),
-        ("sw", "size_ne_sw"), ("se", "size_nw_se"),
+        ("n", "sb_v_double_arrow"),
+        ("s", "sb_v_double_arrow"),
+        ("e", "sb_h_double_arrow"),
+        ("w", "sb_h_double_arrow"),
+        ("nw", "size_nw_se"),
+        ("ne", "size_ne_sw"),
+        ("sw", "size_ne_sw"),
+        ("se", "size_nw_se"),
     ]
 
     for direction, cursor_name in resize_handles:
         handle = tk.Frame(
-            window, bg=theme.DASHBOARD_BACKGROUND,
-            cursor=cursor_name, bd=0, highlightthickness=0
+            window,
+            bg=theme.DASHBOARD_BACKGROUND,
+            cursor=cursor_name,
+            bd=0,
+            highlightthickness=0
         )
 
         if direction == "n":
-            handle.place(x=resize_border, y=0, relwidth=1,
-                         width=-2 * resize_border, height=resize_border)
+            handle.place(
+                x=resize_border, y=0, relwidth=1,
+                width=-2 * resize_border, height=resize_border
+            )
         elif direction == "s":
-            handle.place(x=resize_border, rely=1, y=-resize_border,
-                         relwidth=1, width=-2 * resize_border, height=resize_border)
+            handle.place(
+                x=resize_border, rely=1, y=-resize_border,
+                relwidth=1, width=-2 * resize_border,
+                height=resize_border
+            )
         elif direction == "e":
-            handle.place(relx=1, x=-resize_border, y=resize_border,
-                         relheight=1, height=-2 * resize_border, width=resize_border)
+            handle.place(
+                relx=1, x=-resize_border, y=resize_border,
+                relheight=1, height=-2 * resize_border,
+                width=resize_border
+            )
         elif direction == "w":
-            handle.place(x=0, y=resize_border, relheight=1,
-                         height=-2 * resize_border, width=resize_border)
+            handle.place(
+                x=0, y=resize_border, relheight=1,
+                height=-2 * resize_border, width=resize_border
+            )
         elif direction == "nw":
             handle.place(x=0, y=0, width=resize_border, height=resize_border)
         elif direction == "ne":
-            handle.place(relx=1, x=-resize_border, y=0,
-                         width=resize_border, height=resize_border)
+            handle.place(
+                relx=1, x=-resize_border, y=0,
+                width=resize_border, height=resize_border
+            )
         elif direction == "sw":
-            handle.place(x=0, rely=1, y=-resize_border,
-                         width=resize_border, height=resize_border)
+            handle.place(
+                x=0, rely=1, y=-resize_border,
+                width=resize_border, height=resize_border
+            )
         elif direction == "se":
-            handle.place(relx=1, rely=1, x=-resize_border, y=-resize_border,
-                         width=resize_border, height=resize_border)
+            handle.place(
+                relx=1, rely=1, x=-resize_border, y=-resize_border,
+                width=resize_border, height=resize_border
+            )
 
         handle.bind(
             "<ButtonPress-1>",
@@ -529,4 +664,3 @@ def show_dashboard(window):
         )
         handle.bind("<B1-Motion>", perform_resize)
         handle.bind("<ButtonRelease-1>", stop_resize)
-  
