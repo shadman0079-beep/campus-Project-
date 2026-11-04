@@ -1,13 +1,14 @@
 
+# screens/asset_registry.py
 # BubtOps - Asset Registry
-# Improved dark theme with clearly visible input fields.
+# Same-window navigation with SQLite asset management.
 
 import sqlite3
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import date
 
-import theme
+import theme_backup
 from database.db import DATABASE_PATH
 
 
@@ -17,7 +18,7 @@ STATUSES = (
     "In Service",
     "Needs Maintenance",
     "Under Maintenance",
-    "Out of Service"
+    "Out of Service",
 )
 
 FIELD_BG = "#1B2F4B"
@@ -27,139 +28,162 @@ BUTTON_TEXT = "#FFFFFF"
 
 
 def show_asset_registry(parent):
-    """Open the Asset Registry window."""
+    """Display Asset Registry inside BubtOps's existing window."""
 
-    page = tk.Toplevel(parent)
-    page.title("BubtOps | Asset Registry")
-    page.geometry("1150x760")
-    page.minsize(900, 620)
-    page.configure(bg=theme.DASHBOARD_BACKGROUND)
+    # Reuse the content area created by dashboard.py.
+    host = getattr(parent, "_bubtops_content_host", None)
+
+    if host is None or not host.winfo_exists():
+        messagebox.showerror(
+            "Navigation Error",
+            "The BubtOps content area was not found.\n\n"
+            "Please restart the application.",
+            parent=parent,
+        )
+        return
+
+    # Clear the previous screen without destroying the main window.
+    for widget in host.winfo_children():
+        widget.destroy()
+
+    host.configure(bg=theme_backup.DASHBOARD_BACKGROUND)
 
     selected_id = {"value": None}
     location_map = {}
 
+    # ---------------------------------------------------------
+    # DATABASE CONNECTION
+    # ---------------------------------------------------------
+
     def connect():
-        db = sqlite3.connect(DATABASE_PATH)
-        db.execute("PRAGMA foreign_keys = ON")
-        return db
+        connection = sqlite3.connect(DATABASE_PATH)
+        connection.execute("PRAGMA foreign_keys = ON")
+        return connection
 
-    # ---------- WINDOW STYLE ----------
+    # ---------------------------------------------------------
+    # WIDGET STYLES
+    # ---------------------------------------------------------
 
-    style = ttk.Style(page)
-    style.theme_use("clam")
+    style = ttk.Style(parent)
 
     style.configure(
-        "BubtOps.TCombobox",
+        "AssetRegistry.TCombobox",
         fieldbackground=FIELD_BG,
         background=FIELD_BG,
-        foreground=theme.TEXT_PRIMARY,
-        arrowcolor=theme.CYAN,
+        foreground=theme_backup.TEXT_PRIMARY,
+        arrowcolor=theme_backup.CYAN,
         bordercolor=FIELD_BORDER,
         lightcolor=FIELD_BORDER,
         darkcolor=FIELD_BORDER,
-        padding=(8, 8),
-        arrowsize=14
+        padding=7,
     )
 
     style.map(
-        "BubtOps.TCombobox",
+        "AssetRegistry.TCombobox",
         fieldbackground=[("readonly", FIELD_BG)],
-        foreground=[("readonly", theme.TEXT_PRIMARY)],
+        foreground=[("readonly", theme_backup.TEXT_PRIMARY)],
         selectbackground=[("readonly", FIELD_BG)],
-        selectforeground=[("readonly", theme.TEXT_PRIMARY)],
+        selectforeground=[("readonly", theme_backup.TEXT_PRIMARY)],
         bordercolor=[
             ("focus", FIELD_FOCUS),
-            ("!focus", FIELD_BORDER)
-        ]
+            ("!focus", FIELD_BORDER),
+        ],
     )
 
     style.configure(
-        "BubtOps.Treeview",
-        background=theme.CARD_BACKGROUND,
-        fieldbackground=theme.CARD_BACKGROUND,
-        foreground=theme.TEXT_PRIMARY,
-        rowheight=34,
+        "AssetRegistry.Treeview",
+        background=theme_backup.CARD_BACKGROUND,
+        fieldbackground=theme_backup.CARD_BACKGROUND,
+        foreground=theme_backup.TEXT_PRIMARY,
+        rowheight=32,
         borderwidth=0,
-        font=(theme.FONT_FAMILY, 9)
+        font=(theme_backup.FONT_FAMILY, 9),
     )
 
     style.configure(
-        "BubtOps.Treeview.Heading",
-        background=theme.CARD_BACKGROUND_ALT,
-        foreground=theme.CYAN,
-        font=(theme.FONT_FAMILY, 9, "bold"),
+        "AssetRegistry.Treeview.Heading",
+        background=theme_backup.CARD_BACKGROUND_ALT,
+        foreground=theme_backup.CYAN,
+        font=(theme_backup.FONT_FAMILY, 9, "bold"),
         relief="flat",
-        padding=8
+        padding=7,
     )
 
     style.map(
-        "BubtOps.Treeview",
-        background=[("selected", theme.PRIMARY)],
-        foreground=[("selected", "#FFFFFF")]
+        "AssetRegistry.Treeview",
+        background=[("selected", theme_backup.PRIMARY)],
+        foreground=[("selected", "#FFFFFF")],
     )
 
-    # ---------- REUSABLE UI HELPERS ----------
+    # ---------------------------------------------------------
+    # REUSABLE UI HELPERS
+    # ---------------------------------------------------------
 
-    def make_label(parent_frame, text, color=None, size=9, bold=False):
+    def make_label(
+        container,
+        text,
+        color=None,
+        size=9,
+        bold=False,
+    ):
         return tk.Label(
-            parent_frame,
+            container,
             text=text,
-            bg=parent_frame.cget("bg"),
-            fg=color or theme.TEXT_SECONDARY,
+            bg=container.cget("bg"),
+            fg=color or theme_backup.TEXT_SECONDARY,
             font=(
-                theme.FONT_FAMILY,
+                theme_backup.FONT_FAMILY,
                 size,
-                "bold" if bold else "normal"
-            )
+                "bold" if bold else "normal",
+            ),
+            anchor="w",
         )
 
-   
-    def make_entry(parent_frame, variable=None):
-        """Create an input with a visible border and focus highlight."""
+    def make_entry(container, variable=None):
+        """Create a text entry with a visible border."""
 
         border = tk.Frame(
-            parent_frame,
+            container,
             bg=FIELD_BORDER,
             padx=1,
-            pady=1
+            pady=1,
         )
 
         entry = tk.Entry(
             border,
             textvariable=variable,
             bg=FIELD_BG,
-            fg=theme.TEXT_PRIMARY,
-            insertbackground=theme.TEXT_PRIMARY,
-            selectbackground=theme.PRIMARY,
+            fg=theme_backup.TEXT_PRIMARY,
+            insertbackground=theme_backup.TEXT_PRIMARY,
+            selectbackground=theme_backup.PRIMARY,
             selectforeground="#FFFFFF",
             relief="flat",
             bd=0,
-            font=(theme.FONT_FAMILY, 10),
-            justify="left"
+            font=(theme_backup.FONT_FAMILY, 10),
         )
 
         entry.pack(
             fill="both",
             expand=True,
             padx=7,
-            ipady=5
+            ipady=5,
         )
 
-        def focus_in(event):
-            border.configure(bg=FIELD_FOCUS)
+        entry.bind(
+            "<FocusIn>",
+            lambda event: border.configure(bg=FIELD_FOCUS),
+        )
 
-        def focus_out(event):
-            border.configure(bg=FIELD_BORDER)
-
-        entry.bind("<FocusIn>", focus_in)
-        entry.bind("<FocusOut>", focus_out)
+        entry.bind(
+            "<FocusOut>",
+            lambda event: border.configure(bg=FIELD_BORDER),
+        )
 
         return border, entry
 
-
-    def make_button(parent_frame, label, command, color, width=None):
-        button = tk.Button(
-            parent_frame,
+    def make_button(container, label, command, color):
+        return tk.Button(
+            container,
             text=label,
             command=command,
             bg=color,
@@ -169,65 +193,187 @@ def show_asset_registry(parent):
             relief="flat",
             bd=0,
             cursor="hand2",
-            font=(theme.FONT_FAMILY, 9, "bold"),
-            padx=15,
-            pady=9,
-            width=width
+            font=(theme_backup.FONT_FAMILY, 9, "bold"),
+            padx=11,
+            pady=8,
         )
 
-        button.pack(side="left", padx=(0, 9))
-        return button
+    def show_database_error(error):
+        messagebox.showerror(
+            "Database Error",
+            str(error),
+            parent=parent,
+        )
 
-    # ---------- PAGE HEADER ----------
+    # ---------------------------------------------------------
+    # PAGE HEADER AND BACK BUTTON
+    # ---------------------------------------------------------
 
-    header = tk.Frame(page, bg=theme.DASHBOARD_BACKGROUND)
-    header.pack(fill="x", padx=26, pady=(22, 18))
+    header = tk.Frame(
+        host,
+        bg=theme_backup.HEADER_BACKGROUND,
+    )
+    header.pack(fill="x")
+
+    header_text = tk.Frame(
+        header,
+        bg=theme_backup.HEADER_BACKGROUND,
+    )
+    header_text.pack(
+        side="left",
+        fill="x",
+        expand=True,
+        padx=(22, 5),
+        pady=16,
+    )
 
     tk.Label(
-        header,
+        header_text,
         text="Asset Registry",
-        bg=theme.DASHBOARD_BACKGROUND,
-        fg=theme.TEXT_PRIMARY,
-        font=(theme.FONT_FAMILY, 24, "bold")
+        bg=theme_backup.HEADER_BACKGROUND,
+        fg=theme_backup.TEXT_PRIMARY,
+        font=(theme_backup.FONT_FAMILY, 21, "bold"),
     ).pack(anchor="w")
 
     tk.Label(
-        header,
+        header_text,
         text="Register, search, update and manage campus assets.",
-        bg=theme.DASHBOARD_BACKGROUND,
-        fg=theme.TEXT_SECONDARY,
-        font=(theme.FONT_FAMILY, 10)
-    ).pack(anchor="w", pady=(5, 0))
+        bg=theme_backup.HEADER_BACKGROUND,
+        fg=theme_backup.TEXT_SECONDARY,
+        font=(theme_backup.FONT_FAMILY, 9),
+        wraplength=360,
+        justify="left",
+    ).pack(anchor="w", pady=(4, 0))
 
-    # ---------- ASSET FORM PANEL ----------
+    def go_back():
+        # Import here to avoid a circular import between screens.
+        from screens.dashboard import show_dashboard
+
+        show_dashboard(parent)
+
+    back_button = tk.Button(
+        header,
+        text="←  Back to Dashboard",
+        command=go_back,
+        bg=theme_backup.PRIMARY,
+        fg="#FFFFFF",
+        activebackground=theme_backup.NAVY,
+        activeforeground="#FFFFFF",
+        relief="flat",
+        bd=0,
+        cursor="hand2",
+        font=(theme_backup.FONT_FAMILY, 9, "bold"),
+        padx=10,
+        pady=9,
+    )
+    back_button.pack(
+        side="right",
+        padx=16,
+        pady=18,
+    )
+
+    # ---------------------------------------------------------
+    # SCROLLABLE PAGE BODY
+    # ---------------------------------------------------------
+
+    body_container = tk.Frame(
+        host,
+        bg=theme_backup.DASHBOARD_BACKGROUND,
+    )
+    body_container.pack(fill="both", expand=True)
+
+    canvas = tk.Canvas(
+        body_container,
+        bg=theme_backup.DASHBOARD_BACKGROUND,
+        highlightthickness=0,
+        borderwidth=0,
+    )
+    canvas.pack(side="left", fill="both", expand=True)
+
+    scrollbar = ttk.Scrollbar(
+        body_container,
+        orient="vertical",
+        command=canvas.yview,
+    )
+    scrollbar.pack(side="right", fill="y")
+
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    body = tk.Frame(
+        canvas,
+        bg=theme_backup.DASHBOARD_BACKGROUND,
+    )
+
+    body_window = canvas.create_window(
+        (0, 0),
+        window=body,
+        anchor="nw",
+    )
+
+    def update_scroll_region(event=None):
+        canvas.configure(scrollregion=canvas.bbox("all"))
+        canvas.itemconfigure(
+            body_window,
+            width=canvas.winfo_width(),
+        )
+
+    body.bind("<Configure>", update_scroll_region)
+    canvas.bind("<Configure>", update_scroll_region)
+
+    def scroll_page(event):
+        if event.delta:
+            canvas.yview_scroll(
+                int(-event.delta / 120),
+                "units",
+            )
+        return "break"
+
+    def bind_mousewheel(widget):
+        widget.bind("<MouseWheel>", scroll_page)
+
+        for child in widget.winfo_children():
+            bind_mousewheel(child)
+
+    canvas.bind("<MouseWheel>", scroll_page)
+
+    # ---------------------------------------------------------
+    # ASSET FORM PANEL
+    # ---------------------------------------------------------
 
     form = tk.Frame(
-        page,
-        bg=theme.CARD_BACKGROUND,
-        highlightbackground=theme.BORDER,
-        highlightthickness=1
+        body,
+        bg=theme_backup.CARD_BACKGROUND,
+        highlightbackground=theme_backup.BORDER,
+        highlightthickness=1,
     )
-    form.pack(fill="x", padx=26, pady=(0, 16))
+    form.pack(
+        fill="x",
+        padx=18,
+        pady=(18, 14),
+    )
 
     tk.Label(
         form,
         text="ASSET DETAILS",
-        bg=theme.CARD_BACKGROUND,
-        fg=theme.CYAN,
-        font=(theme.FONT_FAMILY, 10, "bold")
+        bg=theme_backup.CARD_BACKGROUND,
+        fg=theme_backup.CYAN,
+        font=(theme_backup.FONT_FAMILY, 10, "bold"),
     ).grid(
-        row=0, column=0, columnspan=4,
-        sticky="w", padx=18, pady=(16, 13)
+        row=0,
+        column=0,
+        columnspan=4,
+        sticky="w",
+        padx=14,
+        pady=(13, 10),
     )
 
     fields = {}
 
-    # Two columns of labeled text fields.
     field_info = [
         ("Asset Code *", "asset_code"),
         ("Asset Name *", "asset_name"),
         ("Category *", "category"),
-        ("Purchase Date", "purchase_date")
+        ("Purchase Date", "purchase_date"),
     ]
 
     for index, (label_text, key) in enumerate(field_info):
@@ -235,13 +381,16 @@ def show_asset_registry(parent):
         column_number = (index % 2) * 2
 
         make_label(
-            form, label_text, size=9, bold=True
+            form,
+            label_text,
+            size=9,
+            bold=True,
         ).grid(
             row=row_number,
             column=column_number,
             sticky="w",
-            padx=(18, 12),
-            pady=(5, 2)
+            padx=(14, 8),
+            pady=(4, 3),
         )
 
         border, entry = make_entry(form)
@@ -250,34 +399,45 @@ def show_asset_registry(parent):
             row=row_number,
             column=column_number + 1,
             sticky="ew",
-            padx=(0, 18),
-            pady=(2, 9)
+            padx=(0, 12),
+            pady=(2, 8),
         )
 
         fields[key] = entry
 
-    form.grid_columnconfigure(1, weight=1, uniform="form")
-    form.grid_columnconfigure(3, weight=1, uniform="form")
+    form.grid_columnconfigure(1, weight=1, uniform="asset_fields")
+    form.grid_columnconfigure(3, weight=1, uniform="asset_fields")
 
-    # Date hint
     tk.Label(
         form,
-        text="Format: YYYY-MM-DD (example: 2026-10-23)",
-        bg=theme.CARD_BACKGROUND,
-        fg=theme.TEXT_MUTED,
-        font=(theme.FONT_FAMILY, 8)
+        text="Date format: YYYY-MM-DD (example: 2026-10-23)",
+        bg=theme_backup.CARD_BACKGROUND,
+        fg=theme_backup.TEXT_MUTED,
+        font=(theme_backup.FONT_FAMILY, 8),
     ).grid(
-        row=3, column=3,
-        sticky="w", padx=(0, 18), pady=(0, 4)
+        row=3,
+        column=2,
+        columnspan=2,
+        sticky="w",
+        padx=(14, 12),
+        pady=(0, 5),
     )
 
-    # ---------- LOCATION, CONDITION AND STATUS ----------
+    # ---------------------------------------------------------
+    # LOCATION, CONDITION AND STATUS
+    # ---------------------------------------------------------
 
     make_label(
-        form, "Location", size=9, bold=True
+        form,
+        "Location",
+        size=9,
+        bold=True,
     ).grid(
-        row=3, column=0, sticky="w",
-        padx=(18, 12), pady=(8, 3)
+        row=4,
+        column=0,
+        sticky="w",
+        padx=(14, 8),
+        pady=(5, 3),
     )
 
     location_var = tk.StringVar(value="Unassigned")
@@ -286,19 +446,28 @@ def show_asset_registry(parent):
         form,
         textvariable=location_var,
         state="readonly",
-        style="BubtOps.TCombobox",
-        font=(theme.FONT_FAMILY, 10)
+        style="AssetRegistry.TCombobox",
+        font=(theme_backup.FONT_FAMILY, 9),
     )
     location_box.grid(
-        row=3, column=1, sticky="ew",
-        padx=(0, 18), pady=(3, 10)
+        row=4,
+        column=1,
+        sticky="ew",
+        padx=(0, 12),
+        pady=(2, 8),
     )
 
     make_label(
-        form, "Condition", size=9, bold=True
+        form,
+        "Condition",
+        size=9,
+        bold=True,
     ).grid(
-        row=3, column=2, sticky="w",
-        padx=(18, 12), pady=(8, 3)
+        row=4,
+        column=2,
+        sticky="w",
+        padx=(14, 8),
+        pady=(5, 3),
     )
 
     condition_var = tk.StringVar(value=CONDITIONS[0])
@@ -308,19 +477,28 @@ def show_asset_registry(parent):
         textvariable=condition_var,
         values=CONDITIONS,
         state="readonly",
-        style="BubtOps.TCombobox",
-        font=(theme.FONT_FAMILY, 10)
+        style="AssetRegistry.TCombobox",
+        font=(theme_backup.FONT_FAMILY, 9),
     )
     condition_box.grid(
-        row=3, column=3, sticky="ew",
-        padx=(0, 18), pady=(3, 10)
+        row=4,
+        column=3,
+        sticky="ew",
+        padx=(0, 12),
+        pady=(2, 8),
     )
 
     make_label(
-        form, "Status", size=9, bold=True
+        form,
+        "Status",
+        size=9,
+        bold=True,
     ).grid(
-        row=4, column=0, sticky="w",
-        padx=(18, 12), pady=(3, 3)
+        row=5,
+        column=0,
+        sticky="w",
+        padx=(14, 8),
+        pady=(3, 3),
     )
 
     status_var = tk.StringVar(value=STATUSES[0])
@@ -330,92 +508,134 @@ def show_asset_registry(parent):
         textvariable=status_var,
         values=STATUSES,
         state="readonly",
-        style="BubtOps.TCombobox",
-        font=(theme.FONT_FAMILY, 10)
+        style="AssetRegistry.TCombobox",
+        font=(theme_backup.FONT_FAMILY, 9),
     )
     status_box.grid(
-        row=4, column=1, sticky="ew",
-        padx=(0, 18), pady=(3, 12)
+        row=5,
+        column=1,
+        sticky="ew",
+        padx=(0, 12),
+        pady=(2, 10),
     )
 
-    # ---------- FORM ACTION BUTTONS ----------
+    # ---------------------------------------------------------
+    # FORM ACTION BUTTONS
+    # ---------------------------------------------------------
 
-    buttons = tk.Frame(form, bg=theme.CARD_BACKGROUND)
+    buttons = tk.Frame(
+        form,
+        bg=theme_backup.CARD_BACKGROUND,
+    )
     buttons.grid(
-        row=5, column=0, columnspan=4,
-        sticky="w", padx=18, pady=(7, 17)
+        row=6,
+        column=0,
+        columnspan=4,
+        sticky="w",
+        padx=14,
+        pady=(5, 14),
     )
 
-    # ---------- SEARCH PANEL ----------
+    # ---------------------------------------------------------
+    # SEARCH PANEL
+    # ---------------------------------------------------------
 
     search_panel = tk.Frame(
-        page,
-        bg=theme.DASHBOARD_BACKGROUND
+        body,
+        bg=theme_backup.DASHBOARD_BACKGROUND,
     )
-    search_panel.pack(fill="x", padx=26, pady=(0, 13))
+    search_panel.pack(
+        fill="x",
+        padx=18,
+        pady=(0, 14),
+    )
 
     tk.Label(
         search_panel,
         text="SEARCH ASSETS",
-        bg=theme.DASHBOARD_BACKGROUND,
-        fg=theme.TEXT_SECONDARY,
-        font=(theme.FONT_FAMILY, 9, "bold")
+        bg=theme_backup.DASHBOARD_BACKGROUND,
+        fg=theme_backup.TEXT_SECONDARY,
+        font=(theme_backup.FONT_FAMILY, 9, "bold"),
     ).pack(anchor="w", pady=(0, 6))
 
     search_var = tk.StringVar()
 
     search_border, search_entry = make_entry(
-        search_panel, search_var
+        search_panel,
+        search_var,
     )
     search_border.pack(fill="x")
 
-    # ---------- ASSET TABLE ----------
+    # ---------------------------------------------------------
+    # REGISTERED ASSETS TABLE
+    # ---------------------------------------------------------
 
     table_panel = tk.Frame(
-        page,
-        bg=theme.CARD_BACKGROUND,
-        highlightbackground=theme.BORDER,
-        highlightthickness=1
+        body,
+        bg=theme_backup.CARD_BACKGROUND,
+        highlightbackground=theme_backup.BORDER,
+        highlightthickness=1,
     )
     table_panel.pack(
-        fill="both", expand=True,
-        padx=26, pady=(0, 22)
+        fill="both",
+        expand=True,
+        padx=18,
+        pady=(0, 18),
     )
 
     tk.Label(
         table_panel,
         text="REGISTERED ASSETS",
-        bg=theme.CARD_BACKGROUND,
-        fg=theme.CYAN,
-        font=(theme.FONT_FAMILY, 10, "bold")
-    ).pack(anchor="w", padx=14, pady=(12, 8))
+        bg=theme_backup.CARD_BACKGROUND,
+        fg=theme_backup.CYAN,
+        font=(theme_backup.FONT_FAMILY, 10, "bold"),
+    ).pack(
+        anchor="w",
+        padx=12,
+        pady=(12, 8),
+    )
 
     table_container = tk.Frame(
         table_panel,
-        bg=theme.CARD_BACKGROUND
+        bg=theme_backup.CARD_BACKGROUND,
     )
     table_container.pack(
-        fill="both", expand=True, padx=10, pady=(0, 10)
+        fill="both",
+        expand=True,
+        padx=8,
+        pady=(0, 8),
     )
 
     columns = (
-        "id", "code", "name", "category",
-        "location", "condition", "status", "purchase_date"
+        "id",
+        "code",
+        "name",
+        "category",
+        "location",
+        "condition",
+        "status",
+        "purchase_date",
     )
 
     headings = (
-        "ID", "ASSET CODE", "ASSET NAME", "CATEGORY",
-        "LOCATION", "CONDITION", "STATUS", "PURCHASE DATE"
+        "ID",
+        "ASSET CODE",
+        "ASSET NAME",
+        "CATEGORY",
+        "LOCATION",
+        "CONDITION",
+        "STATUS",
+        "PURCHASE DATE",
     )
 
-    widths = (45, 105, 155, 110, 150, 95, 145, 120)
+    widths = (45, 100, 145, 100, 125, 90, 140, 115)
 
     table = ttk.Treeview(
         table_container,
         columns=columns,
         show="headings",
         selectmode="browse",
-        style="BubtOps.Treeview"
+        style="AssetRegistry.Treeview",
     )
 
     for column, heading, width in zip(columns, headings, widths):
@@ -423,38 +643,46 @@ def show_asset_registry(parent):
         table.column(
             column,
             width=width,
-            minwidth=45,
-            anchor="w"
+            minwidth=55,
+            anchor="w",
         )
 
     vertical_scroll = ttk.Scrollbar(
         table_container,
         orient="vertical",
-        command=table.yview
+        command=table.yview,
     )
+
     horizontal_scroll = ttk.Scrollbar(
         table_panel,
         orient="horizontal",
-        command=table.xview
+        command=table.xview,
     )
 
     table.configure(
         yscrollcommand=vertical_scroll.set,
-        xscrollcommand=horizontal_scroll.set
+        xscrollcommand=horizontal_scroll.set,
     )
 
     table.pack(side="left", fill="both", expand=True)
     vertical_scroll.pack(side="right", fill="y")
-    horizontal_scroll.pack(fill="x", padx=10, pady=(0, 8))
 
-    # ---------- LOAD LOCATIONS ----------
+    horizontal_scroll.pack(
+        fill="x",
+        padx=8,
+        pady=(0, 8),
+    )
+
+    # ---------------------------------------------------------
+    # LOAD LOCATIONS FROM DATABASE
+    # ---------------------------------------------------------
 
     def load_locations():
         location_map.clear()
 
         try:
-            with connect() as db:
-                rows = db.execute(
+            with connect() as connection:
+                rows = connection.execute(
                     """
                     SELECT location_id, building, floor, room
                     FROM locations
@@ -468,8 +696,11 @@ def show_asset_registry(parent):
                 label = " / ".join(
                     str(part)
                     for part in (building, floor, room)
-                    if part
+                    if part not in (None, "")
                 )
+
+                if not label:
+                    label = f"Location {location_id}"
 
                 if label in location_map:
                     label = f"{label} (ID {location_id})"
@@ -481,11 +712,11 @@ def show_asset_registry(parent):
             location_var.set("Unassigned")
 
         except sqlite3.Error as error:
-            messagebox.showerror(
-                "Database Error", str(error), parent=page
-            )
+            show_database_error(error)
 
-    # ---------- REFRESH TABLE ----------
+    # ---------------------------------------------------------
+    # REFRESH ASSET TABLE
+    # ---------------------------------------------------------
 
     def refresh_table():
         for item in table.get_children():
@@ -494,15 +725,18 @@ def show_asset_registry(parent):
         search = f"%{search_var.get().strip()}%"
 
         try:
-            with connect() as db:
-                rows = db.execute(
+            with connect() as connection:
+                rows = connection.execute(
                     """
                     SELECT
                         a.asset_id,
                         a.asset_code,
                         a.asset_name,
                         a.category,
-                        COALESCE(l.building, 'Unassigned'),
+                        COALESCE(
+                            l.building,
+                            'Unassigned'
+                        ),
                         a.asset_condition,
                         a.status,
                         COALESCE(a.purchase_date, '')
@@ -511,20 +745,21 @@ def show_asset_registry(parent):
                         ON l.location_id = a.location_id
                     WHERE a.asset_code LIKE ?
                        OR a.asset_name LIKE ?
+                       OR a.category LIKE ?
                     ORDER BY a.asset_id DESC
                     """,
-                    (search, search)
+                    (search, search, search),
                 ).fetchall()
 
             for row in rows:
                 table.insert("", "end", values=row)
 
         except sqlite3.Error as error:
-            messagebox.showerror(
-                "Database Error", str(error), parent=page
-            )
+            show_database_error(error)
 
-    # ---------- CLEAR FORM ----------
+    # ---------------------------------------------------------
+    # CLEAR FORM
+    # ---------------------------------------------------------
 
     def clear_form():
         selected_id["value"] = None
@@ -536,21 +771,28 @@ def show_asset_registry(parent):
         status_var.set(STATUSES[0])
         location_var.set("Unassigned")
 
-        table.selection_remove(table.selection())
+        selection = table.selection()
 
-    # ---------- SAVE OR UPDATE ASSET ----------
+        if selection:
+            table.selection_remove(*selection)
+
+    # ---------------------------------------------------------
+    # SAVE OR UPDATE ASSET
+    # ---------------------------------------------------------
 
     def save_asset():
         code = fields["asset_code"].get().strip()
         name = fields["asset_name"].get().strip()
         category = fields["category"].get().strip()
-        purchase_date = fields["purchase_date"].get().strip() or None
+        purchase_date = (
+            fields["purchase_date"].get().strip() or None
+        )
 
         if not code or not name or not category:
             messagebox.showwarning(
                 "Missing Information",
                 "Asset code, asset name, and category are required.",
-                parent=page
+                parent=parent,
             )
             return
 
@@ -561,7 +803,7 @@ def show_asset_registry(parent):
                 messagebox.showwarning(
                     "Invalid Date",
                     "Use YYYY-MM-DD for the purchase date.",
-                    parent=page
+                    parent=parent,
                 )
                 fields["purchase_date"].focus_set()
                 return
@@ -575,27 +817,32 @@ def show_asset_registry(parent):
             location_id,
             condition_var.get(),
             status_var.get(),
-            purchase_date
+            purchase_date,
         )
 
         try:
-            with connect() as db:
+            with connect() as connection:
                 if selected_id["value"] is None:
-                    db.execute(
+                    connection.execute(
                         """
                         INSERT INTO assets (
-                            asset_code, asset_name, category,
-                            location_id, asset_condition,
-                            status, purchase_date
+                            asset_code,
+                            asset_name,
+                            category,
+                            location_id,
+                            asset_condition,
+                            status,
+                            purchase_date
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?)
                         """,
-                        values
+                        values,
                     )
+
                     message = "Asset registered successfully."
 
                 else:
-                    db.execute(
+                    connection.execute(
                         """
                         UPDATE assets
                         SET asset_code = ?,
@@ -607,30 +854,35 @@ def show_asset_registry(parent):
                             purchase_date = ?
                         WHERE asset_id = ?
                         """,
-                        values + (selected_id["value"],)
+                        values + (selected_id["value"],),
                     )
-                    message = "Asset updated successfully."
 
-            messagebox.showinfo(
-                "Success", message, parent=page
-            )
+                    message = "Asset updated successfully."
 
             clear_form()
             refresh_table()
 
+            messagebox.showinfo(
+                "Success",
+                message,
+                parent=parent,
+            )
+
         except sqlite3.IntegrityError as error:
             messagebox.showerror(
                 "Could Not Save",
-                "The asset code may already exist.\n\n" + str(error),
-                parent=page
+                "The asset code may already exist, or another "
+                "database constraint was not satisfied.\n\n"
+                + str(error),
+                parent=parent,
             )
 
         except sqlite3.Error as error:
-            messagebox.showerror(
-                "Database Error", str(error), parent=page
-            )
+            show_database_error(error)
 
-    # ---------- SELECT ASSET FOR EDITING ----------
+    # ---------------------------------------------------------
+    # LOAD SELECTED ASSET FOR EDITING
+    # ---------------------------------------------------------
 
     def load_selected(event=None):
         selection = table.selection()
@@ -642,16 +894,21 @@ def show_asset_registry(parent):
         asset_id = int(row[0])
 
         try:
-            with connect() as db:
-                data = db.execute(
+            with connect() as connection:
+                data = connection.execute(
                     """
-                    SELECT asset_code, asset_name, category,
-                           purchase_date, location_id,
-                           asset_condition, status
+                    SELECT
+                        asset_code,
+                        asset_name,
+                        category,
+                        purchase_date,
+                        location_id,
+                        asset_condition,
+                        status
                     FROM assets
                     WHERE asset_id = ?
                     """,
-                    (asset_id,)
+                    (asset_id,),
                 ).fetchone()
 
             if data is None:
@@ -663,39 +920,39 @@ def show_asset_registry(parent):
                 "asset_code",
                 "asset_name",
                 "category",
-                "purchase_date"
+                "purchase_date",
             )
+
             values_to_fill = (
                 data[0],
                 data[1],
                 data[2],
-                data[3] or ""
+                data[3] or "",
             )
 
             for key, value in zip(keys, values_to_fill):
                 fields[key].delete(0, "end")
                 fields[key].insert(0, value)
 
-            location_var.set(
-                next(
-                    (
-                        label
-                        for label, loc_id in location_map.items()
-                        if loc_id == data[4]
-                    ),
-                    "Unassigned"
-                )
+            matching_location = next(
+                (
+                    label
+                    for label, location_id in location_map.items()
+                    if location_id == data[4]
+                ),
+                "Unassigned",
             )
 
-            condition_var.set(data[5])
-            status_var.set(data[6])
+            location_var.set(matching_location)
+            condition_var.set(data[5] or CONDITIONS[0])
+            status_var.set(data[6] or STATUSES[0])
 
         except sqlite3.Error as error:
-            messagebox.showerror(
-                "Database Error", str(error), parent=page
-            )
+            show_database_error(error)
 
-    # ---------- DELETE ASSET ----------
+    # ---------------------------------------------------------
+    # DELETE SELECTED ASSET
+    # ---------------------------------------------------------
 
     def delete_asset():
         selection = table.selection()
@@ -704,7 +961,7 @@ def show_asset_registry(parent):
             messagebox.showwarning(
                 "Select Asset",
                 "Select an asset from the table first.",
-                parent=page
+                parent=parent,
             )
             return
 
@@ -715,17 +972,17 @@ def show_asset_registry(parent):
             "Confirm Delete",
             f"Delete asset {row[1]} — {row[2]}?\n\n"
             "This action cannot be undone.",
-            parent=page
+            parent=parent,
         )
 
         if not confirmed:
             return
 
         try:
-            with connect() as db:
-                db.execute(
+            with connect() as connection:
+                connection.execute(
                     "DELETE FROM assets WHERE asset_id = ?",
-                    (asset_id,)
+                    (asset_id,),
                 )
 
             clear_form()
@@ -736,40 +993,62 @@ def show_asset_registry(parent):
                 "Cannot Delete",
                 "This asset has maintenance records linked to it. "
                 "Keep its history and change its status instead.",
-                parent=page
+                parent=parent,
             )
 
         except sqlite3.Error as error:
-            messagebox.showerror(
-                "Database Error", str(error), parent=page
-            )
+            show_database_error(error)
 
-    # ---------- CONNECT BUTTONS ----------
+    # ---------------------------------------------------------
+    # CONNECT BUTTONS
+    # ---------------------------------------------------------
 
     make_button(
-        buttons, "Save / Update Asset",
-        save_asset, theme.PRIMARY
-    )
-    make_button(
-        buttons, "Clear Form",
-        clear_form, theme.CARD_BACKGROUND_ALT
-    )
-    make_button(
-        buttons, "Delete Selected",
-        delete_asset, theme.ERROR
-    )
+        buttons,
+        "Save / Update",
+        save_asset,
+        theme_backup.PRIMARY,
+    ).pack(side="left", padx=(0, 7))
 
-    # ---------- EVENTS AND INITIAL DATA ----------
+    make_button(
+        buttons,
+        "Clear Form",
+        clear_form,
+        theme_backup.CARD_BACKGROUND_ALT,
+    ).pack(side="left", padx=(0, 7))
+
+    make_button(
+        buttons,
+        "Delete Selected",
+        delete_asset,
+        theme_backup.ERROR,
+    ).pack(side="left")
+
+    # ---------------------------------------------------------
+    # EVENTS AND INITIAL DATA
+    # ---------------------------------------------------------
 
     search_entry.bind(
         "<KeyRelease>",
-        lambda event: refresh_table()
+        lambda event: refresh_table(),
     )
-    table.bind("<<TreeviewSelect>>", load_selected)
+
+    table.bind(
+        "<<TreeviewSelect>>",
+        load_selected,
+    )
 
     load_locations()
     refresh_table()
 
-    # Put the new window in front of the dashboard.
-    page.transient(parent)
-    page.lift()
+    # Ensure the title bar and resize handles remain on top.
+    for handle in getattr(
+        parent,
+        "_bubtops_resize_handles",
+        [],
+    ):
+        if handle.winfo_exists():
+            handle.lift()
+
+    bind_mousewheel(body)
+ 

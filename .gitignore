@@ -1,0 +1,13 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Local database
+bubtops.db
+*.db
+
+# Local application settings
+bubtops_settings.json
+
+# Backup files
+theme_backup.py
