@@ -8,7 +8,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import date
 
-import theme_backup
+import theme 
 from database.db import DATABASE_PATH
 
 
@@ -29,6 +29,11 @@ BUTTON_TEXT = "#FFFFFF"
 
 def show_asset_registry(parent):
     """Display Asset Registry inside BubtOps's existing window."""
+        # Get colors from the currently selected application theme.
+    FIELD_BG = theme.CARD_BACKGROUND_ALT
+    FIELD_BORDER = theme.BORDER
+    FIELD_FOCUS = theme.PRIMARY
+    BUTTON_TEXT = "#FFFFFF"
 
     # Reuse the content area created by dashboard.py.
     host = getattr(parent, "_bubtops_content_host", None)
@@ -46,7 +51,7 @@ def show_asset_registry(parent):
     for widget in host.winfo_children():
         widget.destroy()
 
-    host.configure(bg=theme_backup.DASHBOARD_BACKGROUND)
+    host.configure(bg=theme .DASHBOARD_BACKGROUND)
 
     selected_id = {"value": None}
     location_map = {}
@@ -70,8 +75,8 @@ def show_asset_registry(parent):
         "AssetRegistry.TCombobox",
         fieldbackground=FIELD_BG,
         background=FIELD_BG,
-        foreground=theme_backup.TEXT_PRIMARY,
-        arrowcolor=theme_backup.CYAN,
+        foreground=theme.TEXT_PRIMARY,
+        arrowcolor=theme.CYAN,
         bordercolor=FIELD_BORDER,
         lightcolor=FIELD_BORDER,
         darkcolor=FIELD_BORDER,
@@ -81,9 +86,9 @@ def show_asset_registry(parent):
     style.map(
         "AssetRegistry.TCombobox",
         fieldbackground=[("readonly", FIELD_BG)],
-        foreground=[("readonly", theme_backup.TEXT_PRIMARY)],
+        foreground=[("readonly", theme.TEXT_PRIMARY)],
         selectbackground=[("readonly", FIELD_BG)],
-        selectforeground=[("readonly", theme_backup.TEXT_PRIMARY)],
+        selectforeground=[("readonly", theme.TEXT_PRIMARY)],
         bordercolor=[
             ("focus", FIELD_FOCUS),
             ("!focus", FIELD_BORDER),
@@ -92,26 +97,26 @@ def show_asset_registry(parent):
 
     style.configure(
         "AssetRegistry.Treeview",
-        background=theme_backup.CARD_BACKGROUND,
-        fieldbackground=theme_backup.CARD_BACKGROUND,
-        foreground=theme_backup.TEXT_PRIMARY,
+        background=theme.CARD_BACKGROUND,
+        fieldbackground=theme.CARD_BACKGROUND,
+        foreground=theme.TEXT_PRIMARY,
         rowheight=32,
         borderwidth=0,
-        font=(theme_backup.FONT_FAMILY, 9),
+        font=(theme.FONT_FAMILY, 9),
     )
 
     style.configure(
         "AssetRegistry.Treeview.Heading",
-        background=theme_backup.CARD_BACKGROUND_ALT,
-        foreground=theme_backup.CYAN,
-        font=(theme_backup.FONT_FAMILY, 9, "bold"),
+        background=theme.CARD_BACKGROUND_ALT,
+        foreground=theme.CYAN,
+        font=(theme.FONT_FAMILY, 9, "bold"),
         relief="flat",
         padding=7,
     )
 
     style.map(
         "AssetRegistry.Treeview",
-        background=[("selected", theme_backup.PRIMARY)],
+        background=[("selected", theme.PRIMARY)],
         foreground=[("selected", "#FFFFFF")],
     )
 
@@ -130,9 +135,9 @@ def show_asset_registry(parent):
             container,
             text=text,
             bg=container.cget("bg"),
-            fg=color or theme_backup.TEXT_SECONDARY,
+            fg=color or theme.TEXT_SECONDARY,
             font=(
-                theme_backup.FONT_FAMILY,
+                theme.FONT_FAMILY,
                 size,
                 "bold" if bold else "normal",
             ),
@@ -153,13 +158,13 @@ def show_asset_registry(parent):
             border,
             textvariable=variable,
             bg=FIELD_BG,
-            fg=theme_backup.TEXT_PRIMARY,
-            insertbackground=theme_backup.TEXT_PRIMARY,
-            selectbackground=theme_backup.PRIMARY,
+            fg=theme.TEXT_PRIMARY,
+            insertbackground=theme.TEXT_PRIMARY,
+            selectbackground=theme.PRIMARY,
             selectforeground="#FFFFFF",
             relief="flat",
             bd=0,
-            font=(theme_backup.FONT_FAMILY, 10),
+            font=(theme.FONT_FAMILY, 10),
         )
 
         entry.pack(
@@ -193,7 +198,7 @@ def show_asset_registry(parent):
             relief="flat",
             bd=0,
             cursor="hand2",
-            font=(theme_backup.FONT_FAMILY, 9, "bold"),
+            font=(theme.FONT_FAMILY, 9, "bold"),
             padx=11,
             pady=8,
         )
@@ -211,13 +216,13 @@ def show_asset_registry(parent):
 
     header = tk.Frame(
         host,
-        bg=theme_backup.HEADER_BACKGROUND,
+        bg=theme.HEADER_BACKGROUND,
     )
     header.pack(fill="x")
 
     header_text = tk.Frame(
         header,
-        bg=theme_backup.HEADER_BACKGROUND,
+        bg=theme.HEADER_BACKGROUND,
     )
     header_text.pack(
         side="left",
@@ -230,17 +235,17 @@ def show_asset_registry(parent):
     tk.Label(
         header_text,
         text="Asset Registry",
-        bg=theme_backup.HEADER_BACKGROUND,
-        fg=theme_backup.TEXT_PRIMARY,
-        font=(theme_backup.FONT_FAMILY, 21, "bold"),
+        bg=theme.HEADER_BACKGROUND,
+        fg=theme.TEXT_PRIMARY,
+        font=(theme.FONT_FAMILY, 21, "bold"),
     ).pack(anchor="w")
 
     tk.Label(
         header_text,
         text="Register, search, update and manage campus assets.",
-        bg=theme_backup.HEADER_BACKGROUND,
-        fg=theme_backup.TEXT_SECONDARY,
-        font=(theme_backup.FONT_FAMILY, 9),
+        bg=theme.HEADER_BACKGROUND,
+        fg=theme.TEXT_SECONDARY,
+        font=(theme.FONT_FAMILY, 9),
         wraplength=360,
         justify="left",
     ).pack(anchor="w", pady=(4, 0))
@@ -255,14 +260,14 @@ def show_asset_registry(parent):
         header,
         text="←  Back to Dashboard",
         command=go_back,
-        bg=theme_backup.PRIMARY,
+        bg=theme.PRIMARY,
         fg="#FFFFFF",
-        activebackground=theme_backup.NAVY,
+        activebackground=theme.NAVY,
         activeforeground="#FFFFFF",
         relief="flat",
         bd=0,
         cursor="hand2",
-        font=(theme_backup.FONT_FAMILY, 9, "bold"),
+        font=(theme.FONT_FAMILY, 9, "bold"),
         padx=10,
         pady=9,
     )
@@ -278,13 +283,13 @@ def show_asset_registry(parent):
 
     body_container = tk.Frame(
         host,
-        bg=theme_backup.DASHBOARD_BACKGROUND,
+        bg=theme.DASHBOARD_BACKGROUND,
     )
     body_container.pack(fill="both", expand=True)
 
     canvas = tk.Canvas(
         body_container,
-        bg=theme_backup.DASHBOARD_BACKGROUND,
+        bg=theme.DASHBOARD_BACKGROUND,
         highlightthickness=0,
         borderwidth=0,
     )
@@ -301,7 +306,7 @@ def show_asset_registry(parent):
 
     body = tk.Frame(
         canvas,
-        bg=theme_backup.DASHBOARD_BACKGROUND,
+        bg=theme.DASHBOARD_BACKGROUND,
     )
 
     body_window = canvas.create_window(
@@ -342,8 +347,8 @@ def show_asset_registry(parent):
 
     form = tk.Frame(
         body,
-        bg=theme_backup.CARD_BACKGROUND,
-        highlightbackground=theme_backup.BORDER,
+        bg=theme.CARD_BACKGROUND,
+        highlightbackground=theme.BORDER,
         highlightthickness=1,
     )
     form.pack(
@@ -355,9 +360,9 @@ def show_asset_registry(parent):
     tk.Label(
         form,
         text="ASSET DETAILS",
-        bg=theme_backup.CARD_BACKGROUND,
-        fg=theme_backup.CYAN,
-        font=(theme_backup.FONT_FAMILY, 10, "bold"),
+        bg=theme.CARD_BACKGROUND,
+        fg=theme.CYAN,
+        font=(theme.FONT_FAMILY, 10, "bold"),
     ).grid(
         row=0,
         column=0,
@@ -411,9 +416,9 @@ def show_asset_registry(parent):
     tk.Label(
         form,
         text="Date format: YYYY-MM-DD (example: 2026-10-23)",
-        bg=theme_backup.CARD_BACKGROUND,
-        fg=theme_backup.TEXT_MUTED,
-        font=(theme_backup.FONT_FAMILY, 8),
+        bg=theme.CARD_BACKGROUND,
+        fg=theme.TEXT_MUTED,
+        font=(theme.FONT_FAMILY, 8),
     ).grid(
         row=3,
         column=2,
@@ -447,7 +452,7 @@ def show_asset_registry(parent):
         textvariable=location_var,
         state="readonly",
         style="AssetRegistry.TCombobox",
-        font=(theme_backup.FONT_FAMILY, 9),
+        font=(theme.FONT_FAMILY, 9),
     )
     location_box.grid(
         row=4,
@@ -478,7 +483,7 @@ def show_asset_registry(parent):
         values=CONDITIONS,
         state="readonly",
         style="AssetRegistry.TCombobox",
-        font=(theme_backup.FONT_FAMILY, 9),
+        font=(theme.FONT_FAMILY, 9),
     )
     condition_box.grid(
         row=4,
@@ -509,7 +514,7 @@ def show_asset_registry(parent):
         values=STATUSES,
         state="readonly",
         style="AssetRegistry.TCombobox",
-        font=(theme_backup.FONT_FAMILY, 9),
+        font=(theme.FONT_FAMILY, 9),
     )
     status_box.grid(
         row=5,
@@ -525,7 +530,7 @@ def show_asset_registry(parent):
 
     buttons = tk.Frame(
         form,
-        bg=theme_backup.CARD_BACKGROUND,
+        bg=theme.CARD_BACKGROUND,
     )
     buttons.grid(
         row=6,
@@ -542,7 +547,7 @@ def show_asset_registry(parent):
 
     search_panel = tk.Frame(
         body,
-        bg=theme_backup.DASHBOARD_BACKGROUND,
+        bg=theme.DASHBOARD_BACKGROUND,
     )
     search_panel.pack(
         fill="x",
@@ -553,9 +558,9 @@ def show_asset_registry(parent):
     tk.Label(
         search_panel,
         text="SEARCH ASSETS",
-        bg=theme_backup.DASHBOARD_BACKGROUND,
-        fg=theme_backup.TEXT_SECONDARY,
-        font=(theme_backup.FONT_FAMILY, 9, "bold"),
+        bg=theme.DASHBOARD_BACKGROUND,
+        fg=theme.TEXT_SECONDARY,
+        font=(theme.FONT_FAMILY, 9, "bold"),
     ).pack(anchor="w", pady=(0, 6))
 
     search_var = tk.StringVar()
@@ -572,8 +577,8 @@ def show_asset_registry(parent):
 
     table_panel = tk.Frame(
         body,
-        bg=theme_backup.CARD_BACKGROUND,
-        highlightbackground=theme_backup.BORDER,
+        bg=theme.CARD_BACKGROUND,
+        highlightbackground=theme.BORDER,
         highlightthickness=1,
     )
     table_panel.pack(
@@ -586,9 +591,9 @@ def show_asset_registry(parent):
     tk.Label(
         table_panel,
         text="REGISTERED ASSETS",
-        bg=theme_backup.CARD_BACKGROUND,
-        fg=theme_backup.CYAN,
-        font=(theme_backup.FONT_FAMILY, 10, "bold"),
+        bg=theme.CARD_BACKGROUND,
+        fg=theme.CYAN,
+        font=(theme.FONT_FAMILY, 10, "bold"),
     ).pack(
         anchor="w",
         padx=12,
@@ -597,7 +602,7 @@ def show_asset_registry(parent):
 
     table_container = tk.Frame(
         table_panel,
-        bg=theme_backup.CARD_BACKGROUND,
+        bg=theme.CARD_BACKGROUND,
     )
     table_container.pack(
         fill="both",
@@ -1007,21 +1012,21 @@ def show_asset_registry(parent):
         buttons,
         "Save / Update",
         save_asset,
-        theme_backup.PRIMARY,
+        theme.PRIMARY,
     ).pack(side="left", padx=(0, 7))
 
     make_button(
         buttons,
         "Clear Form",
         clear_form,
-        theme_backup.CARD_BACKGROUND_ALT,
+        theme.CARD_BACKGROUND_ALT,
     ).pack(side="left", padx=(0, 7))
 
     make_button(
         buttons,
         "Delete Selected",
         delete_asset,
-        theme_backup.ERROR,
+        theme.ERROR,
     ).pack(side="left")
 
     # ---------------------------------------------------------
